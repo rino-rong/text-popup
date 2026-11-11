@@ -879,6 +879,7 @@
 /* Keep ink above the content, below the header and bottom controls. */
 .mod-text-popup .text-popup-stage { isolation: isolate; }
 .mod-text-popup .text-popup-annotation-tools [hidden] { display: none; }
+.mod-text-popup .text-popup-annotation-tools button.text-popup-control-button { padding: 0; }
 .mod-text-popup .text-popup-annotation-tools button:disabled { opacity: 0.4; }
 .mod-text-popup .text-popup-ink-layer {
 	position: absolute;

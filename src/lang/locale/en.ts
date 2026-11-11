@@ -8,6 +8,7 @@
 export default {
 	// —— 设置页 ——
 	'Annotate with pen': 'Annotate with pen',
+	'Redo annotation': 'Redo annotation',
 	'Undo annotation': 'Undo annotation',
 	'Clear annotations on this item': 'Clear annotations on this item',
 	'Laser pointer': 'Laser pointer',

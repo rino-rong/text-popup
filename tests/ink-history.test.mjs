@@ -15,3 +15,16 @@ test('undo restores a cleared drawing and continues through its earlier strokes'
 	assert.deepEqual(page.strokes, []);
 	assert.equal(page.canUndo, false);
 });
+
+test('redo replays draws and clears in order, preserving the next undo cycle', () => {
+	const h = new InkHistory();
+	h.add('A'); h.add('B'); h.clear(); h.add('C');
+	for (let i = 0; i < 4; ++i) h.undo();
+	for (const expected of [['A'], ['A','B'], [], ['C']]) {
+		h.redo(); assert.deepEqual(h.strokes, expected);
+	}
+	assert.equal(h.canRedo, false);
+	h.undo(); h.undo(); assert.deepEqual(h.strokes, ['A','B']);
+	h.clear(); assert.equal(h.canRedo, false);
+	h.undo(); h.add('D'); h.redo(); assert.deepEqual(h.strokes, ['A','B','D']);
+});

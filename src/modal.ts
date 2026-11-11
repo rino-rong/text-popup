@@ -862,12 +862,16 @@ export class TextPopupModal extends Modal {
 		this.scrollEl = stage.createDiv({ cls: 'text-popup-content' });
 		this.laser = this.component.addChild(new ViewerLaser(stage, this.scrollEl));
 		this.ink = this.component.addChild(new ViewerInk(stage, this.scrollEl, () => this.spaceDown));
-		this.scope.register(['Mod'], 'z', evt => {
+		const historyKey = (redo: boolean) => (evt: KeyboardEvent) => {
 			const target = evt.target as Element | null;
-			if (target?.closest('input,textarea,[contenteditable=true]') || (!this.ink.enabled && !this.ink.canUndo)) return true;
-			this.ink.undo();
+			if (target?.closest('input,textarea,[contenteditable=true]')) return true;
+			if (!this.ink.enabled && !(redo ? this.ink.canRedo : this.ink.canUndo)) return true;
+			if (redo) this.ink.redo(); else this.ink.undo();
 			return false;
-		});
+		};
+		this.scope.register(['Mod'], 'z', historyKey(false));
+		this.scope.register(['Mod', 'Shift'], 'z', historyKey(true));
+		if (Platform.isWin) this.scope.register(['Ctrl'], 'y', historyKey(true));
 
 		// mermaid 的 svg 是异步插进来的（实测比正文容器晚约 5ms、在另一个 task 里，见 fitScaledContent），
 		// Canvas 快照的节点盒同理（`MarkdownRenderer` 是异步的）。所以除了渲染后主动算一次，
@@ -1675,10 +1679,13 @@ export class TextPopupModal extends Modal {
 			return button;
 		};
 		const undo = action('undo-2', t('Undo annotation'), () => this.ink.undo());
+		const redo = action('redo-2', t('Redo annotation'), () => this.ink.redo());
+		redo.title += Platform.isWin ? ' (Ctrl+Y)' : Platform.isMacOS ? ' (⌘⇧Z)' : ' (Ctrl+Shift+Z)';
 		const clear = action('eraser', t('Clear annotations on this item'), () => this.ink.clear());
 		this.ink.onChange = () => {
 			pen.setAttribute('aria-pressed', String(this.ink.enabled));
-			undo.hidden = clear.hidden = !this.ink.enabled && !this.ink.canUndo;
+			undo.hidden = redo.hidden = clear.hidden = !this.ink.enabled && !this.ink.canUndo && !this.ink.canRedo;
+			redo.disabled = !this.ink.canRedo;
 			undo.disabled = !this.ink.canUndo;
 			clear.disabled = !this.ink.canClear;
 		};

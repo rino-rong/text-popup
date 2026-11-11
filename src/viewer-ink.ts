@@ -30,6 +30,7 @@ export class ViewerInk extends Component {
 	}
 
 	get canUndo(): boolean { return this.page.canUndo; }
+	get canRedo(): boolean { return this.page.canRedo; }
 	get canClear(): boolean { return this.page.strokes.length > 0; }
 
 	onload(): void {
@@ -96,6 +97,7 @@ export class ViewerInk extends Component {
 		this.onChange();
 	}
 
+	redo(): void { this.finish(false); this.page.redo(); this.redraw(); }
 	undo(): void { this.finish(false); this.page.undo(); this.redraw(); }
 	clear(): void { this.finish(false); this.page.clear(); this.redraw(); }
 

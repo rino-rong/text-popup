@@ -7,6 +7,7 @@ import type en from './en';
 const zhCN: Partial<typeof en> = {
 	// —— 设置页 ——
 	'Annotate with pen': '画笔标注',
+	'Redo annotation': '重做标注',
 	'Undo annotation': '撤销标注',
 	'Clear annotations on this item': '清除当前条目的标注',
 	'Laser pointer': '激光笔',

@@ -43,6 +43,7 @@ import {
 	ZOOM_STEP,
 } from './settings';
 
+import { InkPanel } from './ink-panel';
 import { inkColors, inkWidths, ViewerInk } from './viewer-ink';
 import { ViewerLaser } from './viewer-laser';
 
@@ -698,6 +699,7 @@ export class TextPopupModal extends Modal {
 	 * capture 阶段先手 + stopPropagation，按钮再也看不到空格；`repeat` 必须一并吞掉。
 	 */
 	private onKeyDown = (evt: KeyboardEvent): void => {
+		if ((evt.target as Element | null)?.closest?.('.text-popup-ink-panel')) return;
 		// 过滤态下空格是**输入空格**，不是平移待命（Plan §6 矩阵，真机 K7）
 		if (this.filterOpen) return;
 		if (evt.key !== ' ' || evt.defaultPrevented) return;
@@ -1664,33 +1666,13 @@ export class TextPopupModal extends Modal {
 		pen.title = penLabel;
 		pen.addClass('text-popup-pen-button');
 		const optionsLabel = t('Annotation options');
-		const options = this.createControlButton(tools, 'chevron-down', optionsLabel, button => {
-			const menu = new Menu();
-			const activate = () => {
-				if (this.laser.enabled) { this.laser.setEnabled(false); laserButton.setAttribute('aria-pressed', 'false'); }
-				this.ink.setEnabled(true);
-			};
-			for (const tool of ['pen', 'rectangle'] as const) {
-				menu.addItem(item => item.setTitle(tool === 'pen' ? penLabel : t('Outline rectangle'))
-					.setIcon(tool === 'pen' ? 'pencil' : 'square').setChecked(this.ink.tool === tool)
-					.onClick(() => { this.ink.tool = tool; activate(); }));
-			}
-			menu.addSeparator();
-			for (const color of Object.keys(inkColors) as (keyof typeof inkColors)[]) {
-				menu.addItem(item => item.setTitle(t(color)).setChecked(this.ink.color === color)
-					.onClick(() => { this.ink.color = color; activate(); }));
-			}
-			menu.addSeparator();
-			for (const width of Object.keys(inkWidths) as (keyof typeof inkWidths)[]) {
-				menu.addItem(item => item.setTitle(t(width)).setChecked(this.ink.width === width)
-					.onClick(() => { this.ink.width = width; activate(); }));
-			}
-			const box = button.getBoundingClientRect();
-			menu.showAtPosition({ x: box.left, y: box.bottom });
-		});
+		const options = this.createControlButton(tools, 'chevron-down', optionsLabel, () => panel.toggle());
 		options.addClass('text-popup-ink-options');
 		options.title = optionsLabel;
-		options.setAttribute('aria-haspopup', 'menu');
+		const panel = new InkPanel(this.app, this.component, this.scope, options, this.ink, () => {
+			if (this.laser.enabled) { this.laser.setEnabled(false); laserButton.setAttribute('aria-pressed', 'false'); }
+			this.ink.setEnabled(true);
+		});
 		const label = t('Laser pointer');
 		const laserButton = this.createControlButton(tools, 'circle-dot', label, el => {
 			if (this.ink.enabled) this.ink.setEnabled(false);

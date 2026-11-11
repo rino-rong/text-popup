@@ -9,6 +9,9 @@ export default {
 	// —— 设置页 ——
 	'Annotate with pen': 'Annotate with pen',
 	'Redo annotation': 'Redo annotation',
+	'Tool': 'Tool',
+	'Color': 'Color',
+	'Width': 'Width',
 	'Annotation options': 'Annotation options',
 	'Red': 'Red',
 	'Blue': 'Blue',

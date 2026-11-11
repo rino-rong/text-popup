@@ -8,6 +8,9 @@ const zhCN: Partial<typeof en> = {
 	// —— 设置页 ——
 	'Annotate with pen': '画笔标注',
 	'Redo annotation': '重做标注',
+	'Tool': '工具',
+	'Color': '颜色',
+	'Width': '粗细',
 	'Annotation options': '标注选项',
 	'Red': '红色',
 	'Blue': '蓝色',

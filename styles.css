@@ -921,3 +921,30 @@
 .mod-text-popup .is-inking .text-popup-content:not(.is-pan-ready) * { cursor: crosshair; user-select: none; }
 .mod-text-popup .text-popup-control-button[aria-pressed="true"] { color: var(--text-on-accent); background: var(--interactive-accent); }
 .mod-text-popup .text-popup-content { overscroll-behavior: contain; }
+
+.mod-text-popup .text-popup-ink-panel {
+	position: absolute;
+	top: 100%;
+	inset-inline-end: var(--size-4-3);
+	max-width: calc(100% - var(--size-4-6));
+	max-height: 60vh;
+	overflow: auto;
+	padding: 8px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	box-shadow: var(--shadow-s);
+}
+.mod-text-popup .tp-ink-row { display: flex; align-items: center; gap: 4px; }
+.mod-text-popup .tp-ink-row + .tp-ink-row { margin-top: 6px; }
+.mod-text-popup .tp-ink-label { min-width: 3em; color: var(--text-muted); font-size: var(--font-ui-small); }
+.mod-text-popup .tp-ink-row button {
+	display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px;
+	border: 1px solid transparent; box-shadow: none; font-size: var(--font-ui-small);
+}
+.mod-text-popup .tp-ink-row button::after { content: '✓'; visibility: hidden; }
+.mod-text-popup .tp-ink-row button[aria-pressed=true] { border-color: var(--interactive-accent); }
+.mod-text-popup .tp-ink-row button[aria-pressed=true]::after { visibility: visible; }
+.mod-text-popup .tp-ink-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--tp-swatch); }
+.mod-text-popup .tp-ink-line { width: 14px; height: var(--tp-weight); border-radius: 3px; background: currentColor; }

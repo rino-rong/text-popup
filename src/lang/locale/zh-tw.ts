@@ -9,6 +9,9 @@ const zhTW: Partial<typeof en> = {
 	// —— 設定頁 ——
 	'Annotate with pen': '畫筆標註',
 	'Redo annotation': '重做標註',
+	'Tool': '工具',
+	'Color': '顏色',
+	'Width': '粗細',
 	'Annotation options': '標註選項',
 	'Red': '紅色',
 	'Blue': '藍色',

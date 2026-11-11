@@ -1714,9 +1714,11 @@ export class TextPopupModal extends Modal {
 			if (pen.dataset.tool !== this.ink.tool) {
 				pen.dataset.tool = this.ink.tool;
 				setIcon(pen, this.ink.tool === 'pen' ? 'pencil' : 'square');
-				pen.title = this.ink.tool === 'pen' ? penLabel : t('Outline rectangle');
-				pen.setAttribute('aria-label', pen.title);
 			}
+			const { color, width, tool } = this.ink;
+			pen.title = [tool === 'pen' ? penLabel : t('Outline rectangle'), t(color), t(width)].join(' · ');
+			pen.setAttribute('aria-label', pen.title);
+			pen.setCssProps({ '--tp-ink-color': inkColors[color], '--tp-ink-width': inkWidths[width] + 'px' });
 			pen.setAttribute('aria-pressed', String(this.ink.enabled));
 			undo.hidden = redo.hidden = clear.hidden = !this.ink.enabled && !this.ink.canUndo && !this.ink.canRedo;
 			redo.disabled = !this.ink.canRedo;

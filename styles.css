@@ -878,6 +878,26 @@
 }
 /* Keep ink above the content, below the header and bottom controls. */
 .mod-text-popup .text-popup-stage { isolation: isolate; }
+.mod-text-popup .text-popup-pen-button { position: relative; }
+.mod-text-popup .text-popup-pen-button .svg-icon {
+	width: 13px;
+	height: 13px;
+	transform: translateY(-3px);
+}
+.mod-text-popup .text-popup-pen-button::after {
+	content: '';
+	position: absolute;
+	left: 50%;
+	bottom: 2px;
+	transform: translateX(-50%);
+	width: 14px;
+	height: var(--tp-ink-width);
+	background: var(--tp-ink-color);
+	border-radius: 3px;
+	box-shadow: 0 0 0 1px var(--background-primary);
+	pointer-events: none;
+}
+
 .mod-text-popup .text-popup-annotation-tools [hidden] { display: none; }
 .mod-text-popup .text-popup-annotation-tools button.text-popup-control-button { padding: 0; }
 .mod-text-popup .text-popup-annotation-tools button:disabled { opacity: 0.4; }

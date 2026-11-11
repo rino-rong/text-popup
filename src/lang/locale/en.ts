@@ -7,6 +7,9 @@
  */
 export default {
 	// —— 设置页 ——
+	'Annotate with pen': 'Annotate with pen',
+	'Undo annotation': 'Undo annotation',
+	'Clear annotations on this item': 'Clear annotations on this item',
 	'Laser pointer': 'Laser pointer',
 	'Magnifier icon': 'Magnifier icon',
 	'Enable magnifier icon': 'Enable magnifier icon',

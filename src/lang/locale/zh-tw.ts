@@ -7,6 +7,9 @@ import type en from './en';
  */
 const zhTW: Partial<typeof en> = {
 	// —— 設定頁 ——
+	'Annotate with pen': '畫筆標註',
+	'Undo annotation': '復原標註',
+	'Clear annotations on this item': '清除目前項目的標註',
 	'Laser pointer': '雷射筆',
 	'Magnifier icon': '放大圖示',
 	'Enable magnifier icon': '啟用放大圖示',

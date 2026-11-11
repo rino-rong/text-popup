@@ -43,6 +43,7 @@ import {
 	ZOOM_STEP,
 } from './settings';
 
+import { ViewerInk } from './viewer-ink';
 import { ViewerLaser } from './viewer-laser';
 
 const DEFAULT_ZOOM = 1;
@@ -538,6 +539,7 @@ export class TextPopupModal extends Modal {
 	 */
 	private viewZoom = 1;
 	private laser!: ViewerLaser;
+	private ink!: ViewerInk;
 
 	private graphicPage(): boolean {
 		const type = this.source.entries?.[this.index]?.type;
@@ -723,7 +725,7 @@ export class TextPopupModal extends Modal {
 	private onWindowBlur = (): void => this.endPanReady();
 
 	private onPointerDown = (evt: PointerEvent): void => {
-		if (evt.button !== 0 || this.laser.enabled) return;
+		if (evt.button !== 0 || this.laser.enabled || (this.ink.enabled && !this.spaceDown)) return;
 		if (!this.spaceDown && (this.viewZoom === 1 || !this.graphicPage() || evt.pointerType === 'touch' ||
 			evt.altKey || evt.ctrlKey || evt.metaKey || evt.shiftKey ||
 			(evt.target as Element | null)?.closest('a,button,input,[role=button]'))) return;
@@ -772,7 +774,7 @@ export class TextPopupModal extends Modal {
 	 * 浏览器自己滚，不打断原生手感。
 	 */
 	private onTouchStart = (evt: TouchEvent): void => {
-		if (this.laser.enabled || evt.touches.length !== 1) return;
+		if (this.laser.enabled || this.ink.enabled || evt.touches.length !== 1) return;
 		const touch = evt.touches[0];
 		if (!touch) return;
 		this.touchStart = {
@@ -859,11 +861,18 @@ export class TextPopupModal extends Modal {
 		const stage = this.contentEl.createDiv({ cls: 'text-popup-stage' });
 		this.scrollEl = stage.createDiv({ cls: 'text-popup-content' });
 		this.laser = this.component.addChild(new ViewerLaser(stage, this.scrollEl));
+		this.ink = this.component.addChild(new ViewerInk(stage, this.scrollEl, () => this.spaceDown));
+		this.scope.register(['Mod'], 'z', evt => {
+			const target = evt.target as Element | null;
+			if (target?.closest('input,textarea,[contenteditable=true]') || (!this.ink.enabled && !this.ink.canUndo)) return true;
+			this.ink.undo();
+			return false;
+		});
 
 		// mermaid 的 svg 是异步插进来的（实测比正文容器晚约 5ms、在另一个 task 里，见 fitScaledContent），
 		// Canvas 快照的节点盒同理（`MarkdownRenderer` 是异步的）。所以除了渲染后主动算一次，
 		// 还要盯着新插入的内容补算。
-		this.fitObserver = new MutationObserver(() => this.fitScaledContent());
+		this.fitObserver = new MutationObserver(() => { this.fitScaledContent(); this.ink.schedule(); });
 		// 只监听 childList：fitScaledContent 写的是 CSS 变量（属性变更），不会自触发成死循环。
 		this.fitObserver.observe(this.scrollEl, { childList: true, subtree: true });
 		// 弹窗铺满窗口，窗口尺寸变了 fit 就过期
@@ -1502,6 +1511,7 @@ export class TextPopupModal extends Modal {
 		const textEl = this.scrollEl.createDiv({ cls: 'text-popup-text' });
 		this.textEl?.remove();
 		this.textEl = textEl;
+		this.ink.select(this.index, textEl);
 
 		// 自渲染通道（目前只有 Canvas 快照）：候选自己产出 DOM，`render` 存在时优先于 `rich`。
 		// 与 rich 那条同一套生命周期：子组件挂到弹窗根组件下，随弹窗关闭自动 unload。
@@ -1641,14 +1651,38 @@ export class TextPopupModal extends Modal {
 		this.zoomValueEl = zoomGroupEl.createSpan({ cls: 'text-popup-control-value' });
 		this.createControlButton(zoomGroupEl, 'zoom-in', t('Zoom in'), () => this.stepZoom(1));
 
+		const tools = (this.titleEl.parentElement ?? controlsEl).createDiv({ cls: 'text-popup-annotation-tools' });
+		const penLabel = t('Annotate with pen');
+		const pen = this.createControlButton(tools, 'pencil', penLabel, () => {
+			if (this.laser.enabled) { this.laser.setEnabled(false); laserButton.setAttribute('aria-pressed', 'false'); }
+			this.ink.setEnabled(!this.ink.enabled);
+		});
+		pen.title = penLabel;
+		pen.addClass('text-popup-pen-button');
 		const label = t('Laser pointer');
-		const laserButton = this.createControlButton(this.titleEl.parentElement ?? controlsEl, 'circle-dot', label, el => {
+		const laserButton = this.createControlButton(tools, 'circle-dot', label, el => {
+			if (this.ink.enabled) this.ink.setEnabled(false);
 			this.laser.setEnabled(!this.laser.enabled);
 			el.setAttribute('aria-pressed', String(this.laser.enabled));
 		});
 		laserButton.setAttribute('aria-pressed', 'false');
 		laserButton.title = label;
 		laserButton.addClass('text-popup-laser-button');
+		const action = (icon: string, label: string, callback: () => void) => {
+			const button = tools.createEl('button', { cls: 'text-popup-control-button', attr: { 'aria-label': label, title: label } });
+			setIcon(button, icon);
+			button.addEventListener('click', callback);
+			return button;
+		};
+		const undo = action('undo-2', t('Undo annotation'), () => this.ink.undo());
+		const clear = action('eraser', t('Clear annotations on this item'), () => this.ink.clear());
+		this.ink.onChange = () => {
+			pen.setAttribute('aria-pressed', String(this.ink.enabled));
+			undo.hidden = clear.hidden = !this.ink.enabled && !this.ink.canUndo;
+			undo.disabled = !this.ink.canUndo;
+			clear.disabled = !this.ink.canClear;
+		};
+		this.ink.onChange();
 		this.createControlButton(controlsEl, 'rotate-ccw', t('Reset'), () => this.resetSize());
 		// 移动端没有右键，导出入口挂在控制条上（Discuss Q7 默认）。
 		// 已知限制：图片态 / Canvas 态下控制条整体被隐藏（styles.css:607-612），那些态暂无入口（Plan R4 / U1）。
@@ -2031,6 +2065,7 @@ export class TextPopupModal extends Modal {
 	 * 一直留到收尾那一帧写回精确的 1 才摘掉 —— 「挂上 / 摘掉」各只发生一次，中间帧只改变量与平移。
 	 */
 	private applyViewTransform(scale: number, pan: ScrollOffset): void {
+		this.ink?.schedule();
 		const zoomed = scale !== 1;
 		this.viewZoom = scale;
 		this.viewPan = zoomed ? pan : NO_PAN;

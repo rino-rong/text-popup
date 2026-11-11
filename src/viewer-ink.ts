@@ -3,7 +3,10 @@ import { InkHistory } from './ink-history';
 
 const NS = 'http://www.w3.org/2000/svg';
 const targets = ['.text-popup-canvas-fit', 'svg:not(.svg-icon)', 'img', 'td, th', 'pre'];
+export const inkColors = { Red: '#ed4656', Blue: '#3985e8', Green: '#259d65' } as const;
+export const inkWidths = { Thin: 2, Medium: 3, Thick: 5 } as const;
 type Stroke = {
+	color: string; weight: number;
 	selector: string; ordinal: number; width: number; height: number;
 	points: [number, number][];
 };
@@ -11,6 +14,8 @@ type Mark = { stroke: Stroke; node: SVGPolylineElement; anchor: Element | null }
 
 export class ViewerInk extends Component {
 	enabled = false;
+	color: keyof typeof inkColors = 'Red';
+	width: keyof typeof inkWidths = 'Medium';
 	private readonly layer: SVGSVGElement;
 	private readonly pages = new Map<number, InkHistory<Stroke>>();
 	private page = new InkHistory<Stroke>();
@@ -52,14 +57,16 @@ export class ViewerInk extends Component {
 			if (!width || !height) return;
 			e.preventDefault();
 			e.stopImmediatePropagation();
-			const mark = this.mount({selector, ordinal, width, height, points: []}, anchor);
+			const mark = this.mount({selector, ordinal, width, height, color: inkColors[this.color], weight: inkWidths[this.width], points: []}, anchor);
 			this.active = {mark, id: e.pointerId};
-			this.scroll.setPointerCapture(e.pointerId);
+			// Document listeners keep a mouse drag alive outside the content.
+			// SVG renderers can reclaim mouse capture in the middle of a stroke.
+			if (e.pointerType !== 'mouse') this.scroll.setPointerCapture(e.pointerId);
 			this.sample(e);
 			this.position(mark, this.stage.getBoundingClientRect());
 		}, true);
-		this.registerDomEvent(this.scroll, 'pointermove', e => this.sample(e));
-		this.registerDomEvent(this.scroll, 'pointerup', e => {
+		this.registerDomEvent(this.scroll.ownerDocument, 'pointermove', e => this.sample(e));
+		this.registerDomEvent(this.scroll.ownerDocument, 'pointerup', e => {
 			if (e.pointerId !== this.active?.id) return;
 			this.sample(e);
 			this.finish(true);
@@ -113,6 +120,8 @@ export class ViewerInk extends Component {
 
 	private mount(stroke: Stroke, anchor: Element | null): Mark {
 		const node = this.stage.ownerDocument.createElementNS(NS, 'polyline');
+		node.setAttribute('stroke', stroke.color);
+		node.setAttribute('stroke-width', String(stroke.weight));
 		this.layer.append(node);
 		for (const [x,y] of stroke.points) this.appendPoint(node, x, y);
 		const mark = { stroke, node, anchor };

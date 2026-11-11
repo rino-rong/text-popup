@@ -9,6 +9,13 @@ const zhTW: Partial<typeof en> = {
 	// —— 設定頁 ——
 	'Annotate with pen': '畫筆標註',
 	'Redo annotation': '重做標註',
+	'Annotation options': '標註選項',
+	'Red': '紅色',
+	'Blue': '藍色',
+	'Green': '綠色',
+	'Thin': '細',
+	'Medium': '中',
+	'Thick': '粗',
 	'Undo annotation': '復原標註',
 	'Clear annotations on this item': '清除目前項目的標註',
 	'Laser pointer': '雷射筆',

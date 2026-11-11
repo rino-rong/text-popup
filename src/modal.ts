@@ -43,7 +43,7 @@ import {
 	ZOOM_STEP,
 } from './settings';
 
-import { ViewerInk } from './viewer-ink';
+import { inkColors, inkWidths, ViewerInk } from './viewer-ink';
 import { ViewerLaser } from './viewer-laser';
 
 const DEFAULT_ZOOM = 1;
@@ -1663,6 +1663,28 @@ export class TextPopupModal extends Modal {
 		});
 		pen.title = penLabel;
 		pen.addClass('text-popup-pen-button');
+		const optionsLabel = t('Annotation options');
+		const options = this.createControlButton(tools, 'chevron-down', optionsLabel, button => {
+			const menu = new Menu();
+			const activate = () => {
+				if (this.laser.enabled) { this.laser.setEnabled(false); laserButton.setAttribute('aria-pressed', 'false'); }
+				this.ink.setEnabled(true);
+			};
+			for (const color of Object.keys(inkColors) as (keyof typeof inkColors)[]) {
+				menu.addItem(item => item.setTitle(t(color)).setChecked(this.ink.color === color)
+					.onClick(() => { this.ink.color = color; activate(); }));
+			}
+			menu.addSeparator();
+			for (const width of Object.keys(inkWidths) as (keyof typeof inkWidths)[]) {
+				menu.addItem(item => item.setTitle(t(width)).setChecked(this.ink.width === width)
+					.onClick(() => { this.ink.width = width; activate(); }));
+			}
+			const box = button.getBoundingClientRect();
+			menu.showAtPosition({ x: box.left, y: box.bottom });
+		});
+		options.addClass('text-popup-ink-options');
+		options.title = optionsLabel;
+		options.setAttribute('aria-haspopup', 'menu');
 		const label = t('Laser pointer');
 		const laserButton = this.createControlButton(tools, 'circle-dot', label, el => {
 			if (this.ink.enabled) this.ink.setEnabled(false);

@@ -1,6 +1,7 @@
 import { App, Component, Scope, setIcon } from 'obsidian';
 import { t } from './lang/helpers';
-import { inkColors, inkWidths, ViewerInk } from './viewer-ink';
+import { inkColors, inkWidths } from './ink-style';
+import { ViewerInk } from './viewer-ink';
 
 export class InkPanel {
 	private el: HTMLElement;
@@ -46,6 +47,21 @@ export class InkPanel {
 			b.prepend(b.createSpan({ cls: 'tp-ink-line' }));
 			b.setCssProps({ '--tp-weight': inkWidths[w] + 'px' });
 		}
+		const recall = this.el.createEl('button', { cls: 'tp-ink-recall', attr: { type: 'button' } });
+		this.sync.push(() => {
+			const style = ink.usedStyles.other(ink);
+			recall.hidden = !style;
+			if (style) recall.setText(t('Switch back') + ': ' + [
+				t(style.color), t(style.width), style.tool === 'pen' ? t('Annotate with pen') : t('Outline rectangle'),
+			].join(' · '));
+		});
+		owner.registerDomEvent(recall, 'click', () => {
+			const style = ink.usedStyles.other(ink);
+			if (style) {
+				ink.tool = style.tool; ink.color = style.color; ink.width = style.width;
+				activate(); this.refresh();
+			}
+		});
 		const outside = (e: Event) => {
 			const node = e.target as Node | null;
 			if (!this.el.hidden && !this.el.contains(node) && !trigger.contains(node)) this.close();

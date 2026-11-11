@@ -4,10 +4,10 @@ import { InkHistory } from './ink-history';
 import { describeAnchor, findAnchor, projectCorner, rectanglePoints, resolveAnchor } from './ink-rectangle';
 import type { InkCorner } from './ink-rectangle';
 
+import { inkColors, inkWidths, UsedInkStyles, type InkStyle } from './ink-style';
+
 const NS = 'http://www.w3.org/2000/svg';
 
-export const inkColors = { Red: '#ed4656', Blue: '#3985e8', Green: '#259d65' } as const;
-export const inkWidths = { Thin: 2, Medium: 3, Thick: 5 } as const;
 type Stroke = {
 	tool: 'pen' | 'rectangle'; end?: InkCorner;
 	color: string; weight: number;
@@ -22,11 +22,12 @@ export class ViewerInk extends Component {
 	color: keyof typeof inkColors = 'Red';
 	width: keyof typeof inkWidths = 'Medium';
 	private readonly layer: SVGSVGElement;
+	readonly usedStyles = new UsedInkStyles();
 	private readonly pages = new Map<number, InkHistory<Stroke>>();
 	private page = new InkHistory<Stroke>();
 	private root: HTMLElement | null = null;
 	private marks: Mark[] = [];
-	private active: { mark: Mark; id: number } | null = null;
+	private active: { mark: Mark; id: number; style: InkStyle } | null = null;
 	private frame = 0;
 	private resize!: ResizeObserver;
 	onChange = (): void => {};
@@ -55,7 +56,7 @@ export class ViewerInk extends Component {
 			e.preventDefault();
 			e.stopImmediatePropagation();
 			const mark = this.mount({tool: this.tool, selector, ordinal, width, height, color: inkColors[this.color], weight: inkWidths[this.width], points: []}, anchor);
-			this.active = {mark, id: e.pointerId};
+			this.active = {mark, id: e.pointerId, style: {tool: this.tool, color: this.color, width: this.width}};
 			// Document listeners keep a mouse drag alive outside the content.
 			// SVG renderers can reclaim mouse capture in the middle of a stroke.
 			if (e.pointerType !== 'mouse') this.scroll.setPointerCapture(e.pointerId);
@@ -174,12 +175,13 @@ export class ViewerInk extends Component {
 
 	private finish(commit: boolean): void {
 		if (!this.active) return;
-		const {mark, id} = this.active;
+		const {mark, id, style} = this.active;
 		this.active = null;
 		if (this.scroll.hasPointerCapture(id)) this.scroll.releasePointerCapture(id);
 		const rect = mark.stroke.tool === 'rectangle' ? mark.node.getBoundingClientRect() : null;
 		if (commit && mark.stroke.points.length && (!rect || (rect.width >= 3 && rect.height >= 3))) {
 			this.page.add(mark.stroke);
+			this.usedStyles.record(style);
 			if (mark.endAnchor) this.resize.observe(mark.endAnchor);
 		}
 		else { this.marks.pop(); mark.node.remove(); }

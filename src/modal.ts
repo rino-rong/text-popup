@@ -44,7 +44,8 @@ import {
 } from './settings';
 
 import { InkPanel } from './ink-panel';
-import { inkColors, inkWidths, ViewerInk } from './viewer-ink';
+import { inkColors, inkWidths } from './ink-style';
+import { ViewerInk } from './viewer-ink';
 import { ViewerLaser } from './viewer-laser';
 
 const DEFAULT_ZOOM = 1;

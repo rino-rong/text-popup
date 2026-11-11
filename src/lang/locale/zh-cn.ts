@@ -9,6 +9,7 @@ const zhCN: Partial<typeof en> = {
 	'Annotate with pen': '画笔标注',
 	'Redo annotation': '重做标注',
 	'Tool': '工具',
+	'Switch back': '切回',
 	'Color': '颜色',
 	'Width': '粗细',
 	'Annotation options': '标注选项',

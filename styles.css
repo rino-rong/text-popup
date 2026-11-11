@@ -948,3 +948,5 @@
 .mod-text-popup .tp-ink-row button[aria-pressed=true]::after { visibility: visible; }
 .mod-text-popup .tp-ink-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--tp-swatch); }
 .mod-text-popup .tp-ink-line { width: 14px; height: var(--tp-weight); border-radius: 3px; background: currentColor; }
+
+.mod-text-popup .tp-ink-recall { margin-top: 8px; width: 100%; }

@@ -10,6 +10,7 @@ export default {
 	'Annotate with pen': 'Annotate with pen',
 	'Redo annotation': 'Redo annotation',
 	'Tool': 'Tool',
+	'Switch back': 'Switch back',
 	'Color': 'Color',
 	'Width': 'Width',
 	'Annotation options': 'Annotation options',

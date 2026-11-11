@@ -43,6 +43,8 @@ import {
 	ZOOM_STEP,
 } from './settings';
 
+import { ViewerLaser } from './viewer-laser';
+
 const DEFAULT_ZOOM = 1;
 
 /**
@@ -105,6 +107,13 @@ export function headingColorVariables(style: {
 		if (value) variables.push([name, value]);
 	}
 	return variables;
+}
+
+// Code renderers may also produce tables or documents with inline images.
+export function diagramFence(entry?: PopupEntry): boolean {
+	if (entry?.type !== 'code') return false;
+	const lastLine = entry.text.slice(entry.text.lastIndexOf('\n') + 1).trim();
+	return /^(mermaid|plantuml|puml|graphviz|dot|diagram-popup)(?:\s|$)/i.test(lastLine);
 }
 
 /**
@@ -528,6 +537,17 @@ export class TextPopupModal extends Modal {
 	 * 与字号 / 缩放是相乘关系：字号仍然照旧重排，这一层是叠在上面的 transform。
 	 */
 	private viewZoom = 1;
+	private laser!: ViewerLaser;
+
+	private graphicPage(): boolean {
+		const type = this.source.entries?.[this.index]?.type;
+		if (type === 'canvas') return !!this.textEl?.querySelector('.text-popup-canvas-fit');
+		if (type === 'image' || type === 'excalidraw') return !!this.textEl?.querySelector('img');
+		if (!diagramFence(this.source.entries?.[this.index])) return false;
+		// A code fence is a picture only after its renderer produced a graphic.
+		return Array.from(this.textEl?.querySelectorAll('img, svg:not(.svg-icon)') ?? [])
+			.some(el => !el.closest('pre, button, [role=button], a.internal-link'));
+	}
 	/**
 	 * 进入放大前的滚动位置。再点一下还原时写回去 —— 「刚才看到哪儿」比「放大到哪儿」更重要，
 	 * 而放大期间浏览器会把 scrollTop 夹在新范围内，不写回就回不到原位。
@@ -635,25 +655,30 @@ export class TextPopupModal extends Modal {
 
 	/** 只认 Alt(Option) + 左键。监听挂在 `.text-popup-content` 上，所以控制条的 Alt+Click 不会被误伤。 */
 	private onClick = (evt: MouseEvent): void => {
-		if (!evt.altKey || evt.button !== 0) return;
+		if (evt.button !== 0) return;
+		if (!evt.altKey) {
+			const img = (evt.target as Element | null)?.closest('img');
+			if (!img || this.graphicPage() || evt.ctrlKey || evt.metaKey || evt.shiftKey ||
+				img.closest('a, button, [role=button]') || !this.textEl?.contains(img)) return;
+			evt.preventDefault();
+			evt.stopPropagation();
+			const copy = img.cloneNode(false) as HTMLImageElement;
+			new TextPopupModal(this.app, {
+				sourceName: img.alt || this.source.sourceName, sourcePath: this.source.sourcePath, size: 1,
+				entries: [{ type: 'image', text: img.alt }],
+				read: () => ({ plain: img.alt, rich: '', render: el => { el.addClass('is-rich'); el.append(copy); } }),
+			}, 0, this.settings).open();
+			return;
+		}
 		// preventDefault 压掉链接跳转 / 其它默认行为，stopPropagation 拦住冒泡到核心的点击处理器
 		evt.preventDefault();
 		evt.stopPropagation();
 		this.toggleClickZoom(evt.clientX, evt.clientY);
 	};
 
-	/**
-	 * Ctrl / Command + 滚轮：以指针为锚缩放视图（= 内置图片查看器的手感）。
-	 *
-	 * 只认带修饰键的 wheel：不按修饰键的那种是**原生滚动** —— 放大之后它正好当平移用
-	 * （内容区的可滚区间会随内容一起长出来，实测 1.6× 时 scrollHeight 833 → 1189），
-	 * 与核心 else 分支的「滚轮平移」同效，所以这里一行都不用写。
-	 *
-	 * `preventDefault` 必须写：核心在图片查看器里就是无条件压掉默认动作，且用 {passive:!1}
-	 * 注册（不写的话浏览器可能把 wheel 当被动监听，压不掉 Electron 的默认 Ctrl+滚轮缩放）。
-	 */
+	/** 图像页直接缩放；阅读页保留滚动，Ctrl / Command 仍可显式缩放。 */
 	private onWheel = (evt: WheelEvent): void => {
-		if (!evt.ctrlKey && !evt.metaKey) return;
+		if (!evt.ctrlKey && !evt.metaKey && (!this.graphicPage() || evt.shiftKey || evt.altKey || !evt.deltaY)) return;
 		evt.preventDefault();
 		const next = wheelZoomTarget(this.viewZoom, evt.deltaY, evt.deltaMode, Platform.isMacOS);
 		if (next !== this.viewZoom) this.zoomAtPoint(evt.clientX, evt.clientY, next);
@@ -698,15 +723,18 @@ export class TextPopupModal extends Modal {
 	private onWindowBlur = (): void => this.endPanReady();
 
 	private onPointerDown = (evt: PointerEvent): void => {
-		if (!this.spaceDown || evt.button !== 0) return;
+		if (evt.button !== 0 || this.laser.enabled) return;
+		if (!this.spaceDown && (this.viewZoom === 1 || !this.graphicPage() || evt.pointerType === 'touch' ||
+			evt.altKey || evt.ctrlKey || evt.metaKey || evt.shiftKey ||
+			(evt.target as Element | null)?.closest('a,button,input,[role=button]'))) return;
 		// 拖拽要自己写滚动位置，与过渡的插值会互相覆盖 —— 抢到控制权时先把过渡停掉
 		this.cancelViewZoom();
 		this.panOrigin = {
 			pointerId: evt.pointerId,
 			x: evt.clientX,
 			y: evt.clientY,
-			left: this.scrollEl.scrollLeft,
-			top: this.scrollEl.scrollTop,
+			left: this.scrollEl.scrollLeft - this.viewPan.left,
+			top: this.scrollEl.scrollTop - this.viewPan.top,
 		};
 		this.scrollEl.addClass('is-panning');
 		evt.preventDefault(); // 压掉拖选文字与原生拖拽
@@ -716,8 +744,14 @@ export class TextPopupModal extends Modal {
 		const origin = this.panOrigin;
 		if (!origin || origin.pointerId !== evt.pointerId) return;
 		// 鼠标往哪边拖，内容就往哪边走 → 滚动位置往反方向走
-		this.scrollEl.scrollLeft = origin.left - (evt.clientX - origin.x);
-		this.scrollEl.scrollTop = origin.top - (evt.clientY - origin.y);
+		const left = origin.left - (evt.clientX - origin.x), top = origin.top - (evt.clientY - origin.y);
+		this.scrollEl.scrollLeft = left;
+		this.scrollEl.scrollTop = top;
+		if (this.viewZoom > 1 && this.graphicPage()) {
+			this.applyViewTransform(this.viewZoom, {
+				left: this.scrollEl.scrollLeft - left, top: this.scrollEl.scrollTop - top,
+			});
+		}
 	};
 
 	private onPointerUp = (evt: PointerEvent): void => {
@@ -738,7 +772,7 @@ export class TextPopupModal extends Modal {
 	 * 浏览器自己滚，不打断原生手感。
 	 */
 	private onTouchStart = (evt: TouchEvent): void => {
-		if (evt.touches.length !== 1) return;
+		if (this.laser.enabled || evt.touches.length !== 1) return;
 		const touch = evt.touches[0];
 		if (!touch) return;
 		this.touchStart = {
@@ -822,7 +856,9 @@ export class TextPopupModal extends Modal {
 
 		// 文字外面再包一层，方便用 margin: auto 在满屏窗口里居中：
 		// 内容短时居中显示，内容长时仍可从头滚动。
-		this.scrollEl = this.contentEl.createDiv({ cls: 'text-popup-content' });
+		const stage = this.contentEl.createDiv({ cls: 'text-popup-stage' });
+		this.scrollEl = stage.createDiv({ cls: 'text-popup-content' });
+		this.laser = this.component.addChild(new ViewerLaser(stage, this.scrollEl));
 
 		// mermaid 的 svg 是异步插进来的（实测比正文容器晚约 5ms、在另一个 task 里，见 fitScaledContent），
 		// Canvas 快照的节点盒同理（`MarkdownRenderer` 是异步的）。所以除了渲染后主动算一次，
@@ -835,7 +871,7 @@ export class TextPopupModal extends Modal {
 
 		// 视图缩放（Alt+Click）与空格平移：都只挂正文区，控制条 / 标题栏不受影响。
 		this.scrollEl.addEventListener('mousedown', this.onMouseDown);
-		this.scrollEl.addEventListener('click', this.onClick);
+		this.scrollEl.addEventListener('click', this.onClick, true);
 		// passive: false 才能 preventDefault 掉 Electron 默认的整界面缩放（见 onWheel）
 		this.scrollEl.addEventListener('wheel', this.onWheel, { passive: false });
 		this.scrollEl.addEventListener('pointerdown', this.onPointerDown);
@@ -875,7 +911,7 @@ export class TextPopupModal extends Modal {
 		this.component.unload();
 		// 视图缩放 / 平移的监听同样属于「弹窗存续期间」的资源，逐一解绑
 		this.scrollEl.removeEventListener('mousedown', this.onMouseDown);
-		this.scrollEl.removeEventListener('click', this.onClick);
+		this.scrollEl.removeEventListener('click', this.onClick, true);
 		// removeEventListener 不比较 passive，只比较 capture，所以解绑不用带配置对象
 		this.scrollEl.removeEventListener('wheel', this.onWheel);
 		this.scrollEl.removeEventListener('pointerdown', this.onPointerDown);
@@ -1010,6 +1046,7 @@ export class TextPopupModal extends Modal {
 		const body = this.source.read(index);
 		if (!body) return;
 		this.index = index;
+		this.laser.clear();
 		// 从长块切到长块时，浏览器不会自动回到顶部，必须显式复位
 		this.scrollEl.scrollTop = 0;
 		this.scrollEl.scrollLeft = 0;
@@ -1604,6 +1641,14 @@ export class TextPopupModal extends Modal {
 		this.zoomValueEl = zoomGroupEl.createSpan({ cls: 'text-popup-control-value' });
 		this.createControlButton(zoomGroupEl, 'zoom-in', t('Zoom in'), () => this.stepZoom(1));
 
+		const label = t('Laser pointer');
+		const laserButton = this.createControlButton(this.titleEl.parentElement ?? controlsEl, 'circle-dot', label, el => {
+			this.laser.setEnabled(!this.laser.enabled);
+			el.setAttribute('aria-pressed', String(this.laser.enabled));
+		});
+		laserButton.setAttribute('aria-pressed', 'false');
+		laserButton.title = label;
+		laserButton.addClass('text-popup-laser-button');
 		this.createControlButton(controlsEl, 'rotate-ccw', t('Reset'), () => this.resetSize());
 		// 移动端没有右键，导出入口挂在控制条上（Discuss Q7 默认）。
 		// 已知限制：图片态 / Canvas 态下控制条整体被隐藏（styles.css:607-612），那些态暂无入口（Plan R4 / U1）。

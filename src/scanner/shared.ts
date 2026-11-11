@@ -194,9 +194,7 @@ export interface EmbeddedAnchor {
  */
 export function embeddedAnchor(app: App, el: HTMLElement): EmbeddedAnchor | null {
 	// d.ts 的 `MarkdownFileInfo` 没有 `containerEl`，内嵌 controller 是在运行时多给的
-	const active = app.workspace.activeEditor as
-		| (MarkdownFileInfo & { containerEl?: HTMLElement })
-		| null;
+	const active: (MarkdownFileInfo & { containerEl?: HTMLElement }) | null = app.workspace.activeEditor;
 	const editor = active?.editor;
 	if (!editor) return null;
 	const hostEl =

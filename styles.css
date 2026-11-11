@@ -839,3 +839,29 @@
 		padding: var(--size-4-1) var(--size-4-2);
 	}
 }
+
+.mod-text-popup .text-popup-stage {
+	position: relative;
+	display: flex;
+	flex: 1 1 auto;
+	min-height: 0;
+	min-width: 0;
+}
+.mod-text-popup .text-popup-laser-layer {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	pointer-events: none;
+	display: none;
+}
+.mod-text-popup .is-laser .text-popup-laser-layer { display: block; }
+.mod-text-popup .is-laser .text-popup-content { cursor: crosshair; touch-action: none; user-select: none; }
+.mod-text-popup .text-popup-laser-button {
+	position: absolute;
+	inset-inline-end: var(--size-4-12);
+	top: var(--size-4-2);
+}
+.mod-text-popup .modal-header:has(.text-popup-laser-button) { padding-inline-end: var(--size-4-20); }
+.mod-text-popup .text-popup-control-button[aria-pressed="true"] { color: var(--text-on-accent); background: var(--interactive-accent); }
+.mod-text-popup .text-popup-content { overscroll-behavior: contain; }

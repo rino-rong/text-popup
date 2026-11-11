@@ -7,6 +7,7 @@
  */
 export default {
 	// —— 设置页 ——
+	'Laser pointer': 'Laser pointer',
 	'Magnifier icon': 'Magnifier icon',
 	'Enable magnifier icon': 'Enable magnifier icon',
 	'Show a magnifier icon for supported blocks in Live Preview.':

@@ -7,6 +7,7 @@ import type en from './en';
  */
 const zhTW: Partial<typeof en> = {
 	// —— 設定頁 ——
+	'Laser pointer': '雷射筆',
 	'Magnifier icon': '放大圖示',
 	'Enable magnifier icon': '啟用放大圖示',
 	'Show a magnifier icon for supported blocks in Live Preview.':

@@ -64,6 +64,7 @@ const jiti = createJiti(import.meta.url, {
 const {
 	clampBlockLine,
 	clampScroll,
+	diagramFence,
 	clickZoomTarget,
 	easeOutCubic,
 	elementPoint,
@@ -820,3 +821,12 @@ function fakeApp(views, active = null) {
 		},
 	};
 }
+
+test('观看已声明的图表围栏；带图片的数据表、示例代码和非代码条目仍按阅读处理', () => {
+	for (const lang of ['mermaid', 'plantuml', 'puml', 'Graphviz', 'dot']) {
+		assert.equal(diagramFence({ type: 'code', text: 'sample\n' + lang }), true);
+	}
+	for (const [type, text] of [['code', 'mermaid\ndataview'], ['code', 'graphviz\njavascript'], ['table', 'dot']]) {
+		assert.equal(diagramFence({ type, text }), false);
+	}
+});

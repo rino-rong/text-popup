@@ -6,6 +6,7 @@ import type en from './en';
  */
 const zhCN: Partial<typeof en> = {
 	// —— 设置页 ——
+	'Laser pointer': '激光笔',
 	'Magnifier icon': '放大图标',
 	'Enable magnifier icon': '启用放大图标',
 	'Show a magnifier icon for supported blocks in Live Preview.':

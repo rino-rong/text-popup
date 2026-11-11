@@ -16,6 +16,7 @@ const zhTW: Partial<typeof en> = {
 	'Thin': '細',
 	'Medium': '中',
 	'Thick': '粗',
+	'Outline rectangle': '空心矩形框',
 	'Undo annotation': '復原標註',
 	'Clear annotations on this item': '清除目前項目的標註',
 	'Laser pointer': '雷射筆',

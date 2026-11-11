@@ -1670,6 +1670,12 @@ export class TextPopupModal extends Modal {
 				if (this.laser.enabled) { this.laser.setEnabled(false); laserButton.setAttribute('aria-pressed', 'false'); }
 				this.ink.setEnabled(true);
 			};
+			for (const tool of ['pen', 'rectangle'] as const) {
+				menu.addItem(item => item.setTitle(tool === 'pen' ? penLabel : t('Outline rectangle'))
+					.setIcon(tool === 'pen' ? 'pencil' : 'square').setChecked(this.ink.tool === tool)
+					.onClick(() => { this.ink.tool = tool; activate(); }));
+			}
+			menu.addSeparator();
 			for (const color of Object.keys(inkColors) as (keyof typeof inkColors)[]) {
 				menu.addItem(item => item.setTitle(t(color)).setChecked(this.ink.color === color)
 					.onClick(() => { this.ink.color = color; activate(); }));
@@ -1705,6 +1711,12 @@ export class TextPopupModal extends Modal {
 		redo.title += Platform.isWin ? ' (Ctrl+Y)' : Platform.isMacOS ? ' (⌘⇧Z)' : ' (Ctrl+Shift+Z)';
 		const clear = action('eraser', t('Clear annotations on this item'), () => this.ink.clear());
 		this.ink.onChange = () => {
+			if (pen.dataset.tool !== this.ink.tool) {
+				pen.dataset.tool = this.ink.tool;
+				setIcon(pen, this.ink.tool === 'pen' ? 'pencil' : 'square');
+				pen.title = this.ink.tool === 'pen' ? penLabel : t('Outline rectangle');
+				pen.setAttribute('aria-label', pen.title);
+			}
 			pen.setAttribute('aria-pressed', String(this.ink.enabled));
 			undo.hidden = redo.hidden = clear.hidden = !this.ink.enabled && !this.ink.canUndo && !this.ink.canRedo;
 			redo.disabled = !this.ink.canRedo;

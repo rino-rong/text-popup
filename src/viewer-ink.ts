@@ -1,19 +1,24 @@
 import { Component } from 'obsidian';
 import { InkHistory } from './ink-history';
 
+import { describeAnchor, findAnchor, projectCorner, rectanglePoints, resolveAnchor } from './ink-rectangle';
+import type { InkCorner } from './ink-rectangle';
+
 const NS = 'http://www.w3.org/2000/svg';
-const targets = ['.text-popup-canvas-fit', 'svg:not(.svg-icon)', 'img', 'td, th', 'pre'];
+
 export const inkColors = { Red: '#ed4656', Blue: '#3985e8', Green: '#259d65' } as const;
 export const inkWidths = { Thin: 2, Medium: 3, Thick: 5 } as const;
 type Stroke = {
+	tool: 'pen' | 'rectangle'; end?: InkCorner;
 	color: string; weight: number;
 	selector: string; ordinal: number; width: number; height: number;
 	points: [number, number][];
 };
-type Mark = { stroke: Stroke; node: SVGPolylineElement; anchor: Element | null };
+type Mark = { stroke: Stroke; node: SVGPolylineElement; anchor: Element | null; endAnchor?: Element | null };
 
 export class ViewerInk extends Component {
 	enabled = false;
+	tool: Stroke['tool'] = 'pen';
 	color: keyof typeof inkColors = 'Red';
 	width: keyof typeof inkWidths = 'Medium';
 	private readonly layer: SVGSVGElement;
@@ -43,21 +48,13 @@ export class ViewerInk extends Component {
 		this.registerDomEvent(this.scroll, 'scroll', this.schedule, true);
 		this.registerDomEvent(this.scroll, 'pointerdown', e => {
 			if (!this.enabled || this.panReady() || !this.root || !e.isPrimary || e.button !== 0 || this.active) return;
-			const target = e.target as Element;
-			let anchor: Element = this.root, selector = '', ordinal = 0;
-			for (const candidate of targets) {
-				const el = target.closest(candidate);
-				if (el && this.root.contains(el)) {
-					anchor = el; selector = candidate;
-					ordinal = Array.from(this.root.querySelectorAll(candidate)).indexOf(el);
-					break;
-				}
-			}
+			const anchor = findAnchor(this.root, e.target as Element);
+			const {selector, ordinal} = describeAnchor(this.root, anchor);
 			const {width, height} = anchor.getBoundingClientRect();
 			if (!width || !height) return;
 			e.preventDefault();
 			e.stopImmediatePropagation();
-			const mark = this.mount({selector, ordinal, width, height, color: inkColors[this.color], weight: inkWidths[this.width], points: []}, anchor);
+			const mark = this.mount({tool: this.tool, selector, ordinal, width, height, color: inkColors[this.color], weight: inkWidths[this.width], points: []}, anchor);
 			this.active = {mark, id: e.pointerId};
 			// Document listeners keep a mouse drag alive outside the content.
 			// SVG renderers can reclaim mouse capture in the middle of a stroke.
@@ -122,6 +119,8 @@ export class ViewerInk extends Component {
 		const node = this.stage.ownerDocument.createElementNS(NS, 'polyline');
 		node.setAttribute('stroke', stroke.color);
 		node.setAttribute('stroke-width', String(stroke.weight));
+		node.dataset.tool = stroke.tool;
+		if (stroke.tool === 'rectangle') node.setAttribute('fill', 'none');
 		this.layer.append(node);
 		for (const [x,y] of stroke.points) this.appendPoint(node, x, y);
 		const mark = { stroke, node, anchor };
@@ -141,6 +140,25 @@ export class ViewerInk extends Component {
 		const {stroke, node, anchor} = this.active.mark;
 		const box = anchor?.getBoundingClientRect();
 		if (!box?.width || !box.height) return;
+		if (stroke.tool === 'rectangle' && this.root) {
+			const mark = this.active.mark;
+			if (!stroke.points.length) stroke.points.push([
+				(e.clientX - box.x) * stroke.width / box.width,
+				(e.clientY - box.y) * stroke.height / box.height,
+			]);
+			const hit = this.stage.ownerDocument.elementFromPoint(e.clientX, e.clientY);
+			const end = findAnchor(this.root, hit);
+			const endBox = end.getBoundingClientRect();
+			if (!endBox.width || !endBox.height) return;
+			if (mark.endAnchor !== end || !stroke.end) {
+				mark.endAnchor = end;
+				stroke.end = { ...describeAnchor(this.root, end), x: 0, y: 0 };
+			}
+			stroke.end.x = (e.clientX - endBox.x) / endBox.width;
+			stroke.end.y = (e.clientY - endBox.y) / endBox.height;
+			this.position(mark, this.stage.getBoundingClientRect());
+			return;
+		}
 		const samples = e.getCoalescedEvents?.() ?? [];
 		for (const p of samples.length ? samples : [e]) {
 			const x = (p.clientX - box.left) * stroke.width / box.width;
@@ -159,7 +177,11 @@ export class ViewerInk extends Component {
 		const {mark, id} = this.active;
 		this.active = null;
 		if (this.scroll.hasPointerCapture(id)) this.scroll.releasePointerCapture(id);
-		if (commit && mark.stroke.points.length) this.page.add(mark.stroke);
+		const rect = mark.stroke.tool === 'rectangle' ? mark.node.getBoundingClientRect() : null;
+		if (commit && mark.stroke.points.length && (!rect || (rect.width >= 3 && rect.height >= 3))) {
+			this.page.add(mark.stroke);
+			if (mark.endAnchor) this.resize.observe(mark.endAnchor);
+		}
 		else { this.marks.pop(); mark.node.remove(); }
 		this.onChange();
 	}
@@ -178,12 +200,23 @@ export class ViewerInk extends Component {
 	private position(mark: Mark, stage: DOMRect): void {
 		const {stroke, node} = mark;
 		if (!mark.anchor?.isConnected && this.root) {
-			mark.anchor = stroke.selector ? this.root.querySelectorAll(stroke.selector)[stroke.ordinal] ?? null : this.root;
+			mark.anchor = resolveAnchor(this.root, stroke);
 			if (mark.anchor) this.resize.observe(mark.anchor);
 		}
 		const box = mark.anchor?.getBoundingClientRect();
-		node.style.display = box?.width && box.height ? '' : 'none';
+		node.setAttribute('display', box?.width && box.height ? 'inline' : 'none');
 		if (!box?.width || !box.height) return;
+		if (stroke.end && stroke.points[0] && this.root) {
+			if (!mark.endAnchor?.isConnected) {
+				mark.endAnchor = resolveAnchor(this.root, stroke.end);
+				if (mark.endAnchor) this.resize.observe(mark.endAnchor);
+			}
+			const endBox = mark.endAnchor?.getBoundingClientRect();
+			if (!endBox?.width || !endBox.height) { node.setAttribute('display', 'none'); return; }
+			const endX = projectCorner(stroke.end.x, endBox.x, endBox.width, box.x, box.width, stroke.width);
+			const endY = projectCorner(stroke.end.y, endBox.y, endBox.height, box.y, box.height, stroke.height);
+			node.setAttribute('points', rectanglePoints(...stroke.points[0], endX, endY));
+		}
 		node.setAttribute('transform', `translate(${box.x-stage.x} ${box.y-stage.y}) scale(${box.width/stroke.width} ${box.height/stroke.height})`);
 	}
 }

@@ -16,6 +16,7 @@ export default {
 	'Thin': 'Thin',
 	'Medium': 'Medium',
 	'Thick': 'Thick',
+	'Outline rectangle': 'Outline rectangle',
 	'Undo annotation': 'Undo annotation',
 	'Clear annotations on this item': 'Clear annotations on this item',
 	'Laser pointer': 'Laser pointer',

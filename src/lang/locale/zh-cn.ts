@@ -15,6 +15,7 @@ const zhCN: Partial<typeof en> = {
 	'Thin': '细',
 	'Medium': '中',
 	'Thick': '粗',
+	'Outline rectangle': '空心矩形框',
 	'Undo annotation': '撤销标注',
 	'Clear annotations on this item': '清除当前条目的标注',
 	'Laser pointer': '激光笔',

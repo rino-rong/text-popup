@@ -23,7 +23,7 @@ const zhCN: Partial<typeof en> = {
 	'Undo annotation': '撤销标注',
 	'Clear annotations on this item': '清除当前条目的标注',
 	'Laser pointer': '激光笔',
-	'Laser pointer (Shift + drag for a temporary rectangle)': '激光笔（Shift + 拖动临时框选）',
+	'Laser pointer (Shift + drag for a temporary rectangle; Space + drag to pan)': '激光笔（Shift + 拖动临时框选；空格 + 拖动平移）',
 	'Magnifier icon': '放大图标',
 	'Enable magnifier icon': '启用放大图标',
 	'Show a magnifier icon for supported blocks in Live Preview.':

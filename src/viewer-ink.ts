@@ -56,6 +56,7 @@ export class ViewerInk extends Component {
 			e.preventDefault();
 			e.stopImmediatePropagation();
 			const mark = this.mount({tool: this.tool, selector, ordinal, width, height, color: inkColors[this.color], weight: inkWidths[this.width], points: []}, anchor);
+			this.scroll.addClass('is-drawing');
 			this.active = {mark, id: e.pointerId, style: {tool: this.tool, color: this.color, width: this.width}};
 			// Document listeners keep a mouse drag alive outside the content.
 			// SVG renderers can reclaim mouse capture in the middle of a stroke.
@@ -177,6 +178,7 @@ export class ViewerInk extends Component {
 		if (!this.active) return;
 		const {mark, id, style} = this.active;
 		this.active = null;
+		this.scroll.removeClass('is-drawing');
 		if (this.scroll.hasPointerCapture(id)) this.scroll.releasePointerCapture(id);
 		const rect = mark.stroke.tool === 'rectangle' ? mark.node.getBoundingClientRect() : null;
 		if (commit && mark.stroke.points.length && (!rect || (rect.width >= 3 && rect.height >= 3))) {

@@ -63,7 +63,7 @@ export class ViewerLaser extends Component {
 	private frame = 0;
 	enabled = false;
 
-	constructor(private stage: HTMLElement, private scroller: HTMLElement) {
+	constructor(private stage: HTMLElement, private scroller: HTMLElement, private panReady: () => boolean) {
 		super();
 		const doc = stage.ownerDocument;
 		this.layer = doc.createElementNS(NS, 'svg');
@@ -82,10 +82,11 @@ export class ViewerLaser extends Component {
 	onload(): void {
 		const el = this.scroller;
 		this.registerDomEvent(el, 'pointerdown', e => {
-			if (!this.enabled || this.pointer !== null || e.button !== 0 || !e.isPrimary) return;
+			if (!this.enabled || this.panReady() || this.pointer !== null || e.button !== 0 || !e.isPrimary) return;
 			e.preventDefault();
 			e.stopImmediatePropagation();
 			this.pointer = e.pointerId;
+			el.addClass('is-drawing');
 			el.setPointerCapture(e.pointerId);
 			if (e.shiftKey) {
 				this.resetBox();
@@ -136,6 +137,7 @@ export class ViewerLaser extends Component {
 	private release(): void {
 		const id = this.pointer;
 		this.pointer = null;
+		if (id !== null) this.scroller.removeClass('is-drawing');
 		this.current = null;
 		if (id !== null && this.scroller.hasPointerCapture(id)) this.scroller.releasePointerCapture(id);
 	}

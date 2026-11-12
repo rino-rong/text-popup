@@ -24,7 +24,7 @@ const zhTW: Partial<typeof en> = {
 	'Undo annotation': '復原標註',
 	'Clear annotations on this item': '清除目前項目的標註',
 	'Laser pointer': '雷射筆',
-	'Laser pointer (Shift + drag for a temporary rectangle)': '雷射筆（Shift + 拖曳暫時框選）',
+	'Laser pointer (Shift + drag for a temporary rectangle; Space + drag to pan)': '雷射筆（Shift + 拖曳暫時框選；空白鍵 + 拖曳平移）',
 	'Magnifier icon': '放大圖示',
 	'Enable magnifier icon': '啟用放大圖示',
 	'Show a magnifier icon for supported blocks in Live Preview.':

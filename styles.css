@@ -293,14 +293,6 @@
 	contain: paint;
 }
 
-/* 空格平移的光标。.is-pan-ready = 按住了空格（可开始拖）；.is-panning = 正在拖。 */
-.mod-text-popup .text-popup-content.is-pan-ready {
-	cursor: grab;
-}
-
-.mod-text-popup .text-popup-content.is-panning {
-	cursor: grabbing;
-}
 
 /* 纯文本模式：保留原样换行 */
 .mod-text-popup .text-popup-text.is-plain {
@@ -856,7 +848,7 @@
 	display: none;
 }
 .mod-text-popup .is-laser .text-popup-laser-layer { display: block; }
-.mod-text-popup .is-laser .text-popup-content { cursor: crosshair; touch-action: none; user-select: none; }
+.mod-text-popup .is-laser .text-popup-content { touch-action: none; user-select: none; }
 .mod-text-popup .text-popup-annotation-tools {
 	display: flex;
 	align-items: center;
@@ -917,8 +909,14 @@
 }
 .mod-text-popup .text-popup-laser-layer { z-index: 2; }
 .mod-text-popup .is-inking .text-popup-content { touch-action: none; }
-.mod-text-popup .is-inking .text-popup-content:not(.is-pan-ready),
-.mod-text-popup .is-inking .text-popup-content:not(.is-pan-ready) * { cursor: crosshair; user-select: none; }
+.mod-text-popup :is(.is-inking, .is-laser) .text-popup-content,
+.mod-text-popup :is(.is-inking, .is-laser) .text-popup-content * { cursor: crosshair; user-select: none; }
+.mod-text-popup .text-popup-content.is-pan-ready:not(.is-drawing),
+.mod-text-popup .text-popup-content.is-pan-ready:not(.is-drawing) * { cursor: grab; }
+.mod-text-popup .text-popup-content.is-panning,
+.mod-text-popup .text-popup-content.is-panning * { cursor: grabbing; }
+.mod-text-popup .text-popup-content.is-pan-ready.is-panning,
+.mod-text-popup .text-popup-content.is-pan-ready.is-panning * { cursor: grabbing; }
 .mod-text-popup .text-popup-control-button[aria-pressed="true"] {
 	color: var(--text-normal);
 	background: var(--background-secondary);

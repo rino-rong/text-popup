@@ -575,6 +575,7 @@ export class TextPopupModal extends Modal {
 	/** 正在拖拽平移时的起点；非空 = 正在拖（也用来给文档级 pointermove 做门禁）。 */
 	private panOrigin: {
 		pointerId: number;
+		moved: boolean;
 		x: number;
 		y: number;
 		left: number;
@@ -721,20 +722,22 @@ export class TextPopupModal extends Modal {
 
 	private onKeyUp = (evt: KeyboardEvent): void => {
 		if (evt.key !== ' ') return;
-		this.endPanReady();
+		this.spaceDown = false;
+		this.scrollEl.removeClass('is-pan-ready');
 	};
 
 	/** 按住空格时切窗口，keyup 永远不会来 —— 靠窗口失焦收口。 */
 	private onWindowBlur = (): void => this.endPanReady();
 
 	private onPointerDown = (evt: PointerEvent): void => {
-		if (evt.button !== 0 || this.laser.enabled || (this.ink.enabled && !this.spaceDown)) return;
+		if (!evt.isPrimary || evt.button !== 0 || this.panOrigin || ((this.laser.enabled || this.ink.enabled) && !this.spaceDown)) return;
 		if (!this.spaceDown && (this.viewZoom === 1 || !this.graphicPage() || evt.pointerType === 'touch' ||
 			evt.altKey || evt.ctrlKey || evt.metaKey || evt.shiftKey ||
 			(evt.target as Element | null)?.closest('a,button,input,[role=button]'))) return;
 		// 拖拽要自己写滚动位置，与过渡的插值会互相覆盖 —— 抢到控制权时先把过渡停掉
 		this.cancelViewZoom();
 		this.panOrigin = {
+			moved: false,
 			pointerId: evt.pointerId,
 			x: evt.clientX,
 			y: evt.clientY,
@@ -756,6 +759,11 @@ export class TextPopupModal extends Modal {
 			this.applyViewTransform(this.viewZoom, {
 				left: this.scrollEl.scrollLeft - left, top: this.scrollEl.scrollTop - top,
 			});
+		}
+		if (!origin.moved && (this.scrollEl.scrollLeft - this.viewPan.left !== origin.left ||
+			this.scrollEl.scrollTop - this.viewPan.top !== origin.top)) {
+			origin.moved = true;
+			if (this.laser.enabled) this.laser.clear();
 		}
 	};
 
@@ -863,7 +871,7 @@ export class TextPopupModal extends Modal {
 		// 内容短时居中显示，内容长时仍可从头滚动。
 		const stage = this.contentEl.createDiv({ cls: 'text-popup-stage' });
 		this.scrollEl = stage.createDiv({ cls: 'text-popup-content' });
-		this.laser = this.component.addChild(new ViewerLaser(stage, this.scrollEl));
+		this.laser = this.component.addChild(new ViewerLaser(stage, this.scrollEl, () => this.spaceDown));
 		this.ink = this.component.addChild(new ViewerInk(stage, this.scrollEl, () => this.spaceDown));
 		const historyKey = (redo: boolean) => (evt: KeyboardEvent) => {
 			const target = evt.target as Element | null;
@@ -1681,7 +1689,7 @@ export class TextPopupModal extends Modal {
 			el.setAttribute('aria-pressed', String(this.laser.enabled));
 		});
 		laserButton.setAttribute('aria-pressed', 'false');
-		laserButton.title = t('Laser pointer (Shift + drag for a temporary rectangle)');
+		laserButton.title = t('Laser pointer (Shift + drag for a temporary rectangle; Space + drag to pan)');
 		laserButton.addClass('text-popup-laser-button');
 		const action = (icon: string, label: string, callback: () => void) => {
 			const button = tools.createEl('button', { cls: 'text-popup-control-button', attr: { 'aria-label': label, title: label } });
@@ -2112,7 +2120,7 @@ export class TextPopupModal extends Modal {
 		this.scrollEl.removeClass('is-panning');
 	}
 
-	/** 退出平移待命：松开空格 / 窗口失焦 / 关窗时调用，拖拽中也会一并结束。 */
+	/** 窗口失焦或关窗时，同时退出空格待命和当前拖动。 */
 	private endPanReady(): void {
 		this.spaceDown = false;
 		this.panOrigin = null;

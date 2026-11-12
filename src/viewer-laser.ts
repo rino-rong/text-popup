@@ -54,6 +54,9 @@ export function laserOutline(samples: Point[], now: number): string {
 export class ViewerLaser extends Component {
 	private layer: SVGSVGElement;
 	private path: SVGPathElement;
+	private box: SVGRectElement;
+	private corner: { x: number; y: number } | null = null;
+	private fade: Animation | null = null;
 	private strokes: Stroke[] = [];
 	private current: Stroke | null = null;
 	private pointer: number | null = null;
@@ -68,7 +71,11 @@ export class ViewerLaser extends Component {
 		this.layer.setAttribute('aria-hidden', 'true');
 		this.path = doc.createElementNS(NS, 'path');
 		this.path.setAttribute('fill', '#ff0000');
-		this.layer.appendChild(this.path);
+		this.box = doc.createElementNS(NS, 'rect');
+		this.box.setAttribute('fill', 'none');
+		this.box.setAttribute('stroke', '#ff0000');
+		this.box.setAttribute('stroke-width', '2');
+		this.layer.append(this.path, this.box);
 		stage.appendChild(this.layer);
 	}
 
@@ -80,6 +87,12 @@ export class ViewerLaser extends Component {
 			e.stopImmediatePropagation();
 			this.pointer = e.pointerId;
 			el.setPointerCapture(e.pointerId);
+			if (e.shiftKey) {
+				this.resetBox();
+				const bounds = this.stage.getBoundingClientRect();
+				this.corner = { x: e.clientX - bounds.left, y: e.clientY - bounds.top };
+				return;
+			}
 			this.current = { samples: [] };
 			this.strokes.push(this.current);
 			this.record(e);
@@ -91,6 +104,10 @@ export class ViewerLaser extends Component {
 			this.registerDomEvent(el, type, e => {
 				if (e.pointerId !== this.pointer) return;
 				if (type === 'pointerup') this.record(e);
+				if (this.corner) {
+					if (type === 'pointerup') this.fadeBox();
+					else this.resetBox();
+				}
 				this.release();
 			});
 		}
@@ -109,6 +126,7 @@ export class ViewerLaser extends Component {
 
 	clear(): void {
 		this.release();
+		this.resetBox();
 		this.strokes = [];
 		this.stage.win.cancelAnimationFrame(this.frame);
 		this.frame = 0;
@@ -122,7 +140,33 @@ export class ViewerLaser extends Component {
 		if (id !== null && this.scroller.hasPointerCapture(id)) this.scroller.releasePointerCapture(id);
 	}
 
+	private resetBox(): void {
+		this.corner = null;
+		this.fade?.cancel();
+		this.fade = null;
+		this.box.removeAttribute('width');
+		this.box.removeAttribute('height');
+	}
+
+	private fadeBox(): void {
+		this.corner = null;
+		const animation = this.box.animate([{ opacity: 1 }, { opacity: 0 }], {
+			delay: 500, duration: 500, fill: 'forwards',
+		});
+		this.fade = animation;
+		animation.onfinish = () => { if (this.fade === animation) this.resetBox(); };
+	}
+
 	private record(e: PointerEvent): void {
+		if (this.corner) {
+			const bounds = this.stage.getBoundingClientRect();
+			const x = e.clientX - bounds.left, y = e.clientY - bounds.top;
+			this.box.setAttribute('x', String(Math.min(this.corner.x, x)));
+			this.box.setAttribute('y', String(Math.min(this.corner.y, y)));
+			this.box.setAttribute('width', String(Math.abs(x - this.corner.x)));
+			this.box.setAttribute('height', String(Math.abs(y - this.corner.y)));
+			return;
+		}
 		const stroke = this.current;
 		if (!stroke) return;
 		const box = this.stage.getBoundingClientRect(), samples = stroke.samples;

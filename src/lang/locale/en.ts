@@ -24,6 +24,7 @@ export default {
 	'Undo annotation': 'Undo annotation',
 	'Clear annotations on this item': 'Clear annotations on this item',
 	'Laser pointer': 'Laser pointer',
+	'Laser pointer (Shift + drag for a temporary rectangle)': 'Laser pointer (Shift + drag for a temporary rectangle)',
 	'Magnifier icon': 'Magnifier icon',
 	'Enable magnifier icon': 'Enable magnifier icon',
 	'Show a magnifier icon for supported blocks in Live Preview.':

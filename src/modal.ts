@@ -1681,7 +1681,7 @@ export class TextPopupModal extends Modal {
 			el.setAttribute('aria-pressed', String(this.laser.enabled));
 		});
 		laserButton.setAttribute('aria-pressed', 'false');
-		laserButton.title = label;
+		laserButton.title = t('Laser pointer (Shift + drag for a temporary rectangle)');
 		laserButton.addClass('text-popup-laser-button');
 		const action = (icon: string, label: string, callback: () => void) => {
 			const button = tools.createEl('button', { cls: 'text-popup-control-button', attr: { 'aria-label': label, title: label } });

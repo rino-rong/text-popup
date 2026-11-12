@@ -74,7 +74,7 @@ export class ViewerLaser extends Component {
 		this.box = doc.createElementNS(NS, 'rect');
 		this.box.setAttribute('fill', 'none');
 		this.box.setAttribute('stroke', '#ff0000');
-		this.box.setAttribute('stroke-width', '2');
+		this.box.setAttribute('stroke-width', '3');
 		this.layer.append(this.path, this.box);
 		stage.appendChild(this.layer);
 	}

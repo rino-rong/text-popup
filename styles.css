@@ -919,7 +919,14 @@
 .mod-text-popup .is-inking .text-popup-content { touch-action: none; }
 .mod-text-popup .is-inking .text-popup-content:not(.is-pan-ready),
 .mod-text-popup .is-inking .text-popup-content:not(.is-pan-ready) * { cursor: crosshair; user-select: none; }
-.mod-text-popup .text-popup-control-button[aria-pressed="true"] { color: var(--text-on-accent); background: var(--interactive-accent); }
+.mod-text-popup .text-popup-control-button[aria-pressed="true"] {
+	color: var(--text-normal);
+	background: var(--background-secondary);
+	box-shadow: inset 0 0 0 1px var(--text-muted);
+}
+.mod-text-popup .text-popup-control-button[aria-pressed="true"]:hover {
+	background: var(--background-modifier-hover);
+}
 .mod-text-popup .text-popup-content { overscroll-behavior: contain; }
 
 .mod-text-popup .text-popup-ink-panel {
